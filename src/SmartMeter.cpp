@@ -35,7 +35,6 @@ void saveConfigCallback ()
   smartmeter.shouldSaveConfig = true;
 }
 
-
 void SmartMeter::setup()
 {
 	Serial.begin(115200);
@@ -86,13 +85,24 @@ void SmartMeter::setupWifi()
 
     wifiManager.setConnectTimeout(60);
 
-    if (!wifiManager.autoConnect(AP_NAME))
-    {
-		Serial.println("Failed to connect and hit timeout.");
-		delay(3000);
-		ESP.restart();
-		delay(5000);
-    }
+	analogWrite(LED, 50);
+	if (!digitalRead(BTN))
+	{
+		Serial.println("Entering configuration mode by force.");
+		wifiManager.startConfigPortal(AP_NAME);
+	}
+	else
+	{
+		if (!wifiManager.autoConnect(AP_NAME))
+		{
+			Serial.println("Failed to connect and hit timeout.");
+			delay(3000);
+			ESP.restart();
+			delay(5000);
+		}
+	}
+	analogWrite(LED, 0);
+
     //if you get here you have connected to the WiFi
     Serial.println("Successfully connected.");
 
@@ -117,6 +127,7 @@ void SmartMeter::setupWifi()
 		else
 		{
 			json.printTo(Serial);
+			Serial.println();
 			json.printTo(configFile);
 			configFile.close();
 			//end save
@@ -131,41 +142,33 @@ void SmartMeter::setupWifi()
 
 void SmartMeter::readConfig()
 {
-    /*	
-  	
- 	Serial.println("erasing config...");
-	ESP.eraseConfig();
-	
-	Serial.println("formatting FS...");
-	SPIFFS.format();
-*/
     //read configuration from FS json
-    Serial.println("mounting FS...");
+    Serial.print("Mounting file system...");
 
     if (!SPIFFS.begin())
     {
-		Serial.println("failed to mount FS");
+		Serial.println(" failed!");
 		return;
 	}
 
-	Serial.println("mounted file system");
+	Serial.println(" success.");
 	if (!SPIFFS.exists("/config.json"))
 	{
-		Serial.println("no config file found");
+		Serial.println("No config file found.");
 		return;
 	}
 
 	//file exists, reading and loading
-	Serial.println("reading config file");
+	Serial.print("Reading config file...");
 	File configFile = SPIFFS.open("/config.json", "r");
 
 	if (!configFile)
 	{
-		Serial.println("unable to open config file");
+		Serial.println(" failed!");
 		return;
 	}
 
-	Serial.println("opened config file");
+	Serial.println(" success.");
 	size_t size = configFile.size();
 	// Allocate a buffer to store contents of the file.
 	std::unique_ptr<char[]> buf(new char[size]);
@@ -173,20 +176,17 @@ void SmartMeter::readConfig()
 	configFile.readBytes(buf.get(), size);
 	DynamicJsonBuffer jsonBuffer;
 	JsonObject &json = jsonBuffer.parseObject(buf.get());
-	json.printTo(Serial);
 
 	if (!json.success())
 	{
-		Serial.println("failed to load json config");
+		Serial.println("Failed to load json config!");
 		return;
 	}
 
-	Serial.println("\nparsed json");
+	Serial.println("\nParsed json.");
+	json.printTo(Serial);
 
 	strcpy(mqtt_server, json["mqtt_server"]);
-
-	Serial.println("mqtt_server");
 	strcpy(mqtt_port, json["mqtt_port"]);
-	Serial.println("mqtt_port");
-    //end read
+
 }
