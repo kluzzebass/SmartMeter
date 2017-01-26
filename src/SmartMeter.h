@@ -35,54 +35,41 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h> 
 #include <ArduinoJson.h>  
-
-
-
-
+#include <PubSubClient.h>
+#include <lwip/inet.h>
 
 
 #define LED D2
-// #define LED 4 
-
 #define BTN D6
-// #define BTN 12
-
 #define LDR D7
-// #define LDR 13
 
 // Microseconds
 #define DEBOUNCE_TIME 1000
 
-// Used when the WiFiManager enters configuration mode.
-#define AP_NAME "SmartMeter AP"
+// Used when the WiFiManager enters configuration mode and as the client name with MQTT.
+#define AP_NAME "SmartMeter"
 
+// Name of the file SPIFFS file containing the configuration.
+#define CONFIG_FILE "/config.json"
 
-//////////////////
+#define RECONNECT_INTERVAL 5000
+#define PUBLISH_INTERVAL 10000
+#define MQTT_TOPIC_MAX_LEN 64
+#define MQTT_PAYLOAD_MAX_LEN 64
+#define MQTT_TOPIC_Wh "smartmeter/%s/Wh"
 
-/*
-
-#include <SmartMeter.h>
-
-void setup()
-{
-	smartmeter.setup();
-}
-
-void loop()
-{
-	smartmeter.loop();
-}
-
-*/
-///////////////
-
-
+// Various variable max lengths
+#define CFG_MQTT_SERVER_LEN 40
+#define CFG_MQTT_PORT_LEN 6
+#define CFG_METER_ID_LEN 10
 
 
 class SmartMeter
 {
 private:
 	unsigned long counter = 0;
+	unsigned long lastPublish = 0;
+	unsigned long lastReconnect = 0;
 
     WiFiManager wifiManager;
 
@@ -90,12 +77,21 @@ private:
 	Blinker blinker;
 
 	// MQTT config
-	char mqtt_server[40];
-	char mqtt_port[6] = "1883";
+	char mqttServer[CFG_MQTT_SERVER_LEN] = "192.168.2.2";
+	char mqttPort[CFG_MQTT_PORT_LEN] = "1883";
+	char meterId[CFG_METER_ID_LEN] = "104564";
+
+	uint32_t mqttIp;
+
+	WiFiClient wifiClient;
+	PubSubClient psClient;
+
+	char topic[MQTT_TOPIC_MAX_LEN];
+
 
 	void readConfig();
 	void setupWifi();
-
+	void publish();
 
 public:
 
