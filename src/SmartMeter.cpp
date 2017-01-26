@@ -49,21 +49,19 @@ void SmartMeter::setup()
 	readConfig();
 	setupWifi();
 
-
-
 	IPAddress addr(inet_addr(mqttServer));
 	uint16_t port = atoi(mqttPort);
 
-
-	Serial.print("MQTT address: ");
+	Serial.print(F("MQTT address: "));
 	addr.printTo(Serial);
-	Serial.print(":");
+	Serial.print(F(":"));
 	Serial.println(port);
 
 	psClient.setClient(wifiClient);
 	psClient.setServer(addr, port);
 
 	snprintf(topic, MQTT_TOPIC_MAX_LEN, MQTT_TOPIC_Wh, meterId);
+
 	Serial.print(F("Publishing to topic "));
 	Serial.println(topic);
 }
@@ -199,14 +197,16 @@ void SmartMeter::readConfig()
 	DynamicJsonBuffer jsonBuffer;
 	JsonObject &json = jsonBuffer.parseObject(buf.get());
 
+	Serial.print(F("Parsing json... "));
 	if (!json.success())
 	{
-		Serial.println(F("Failed to load json config!"));
+		Serial.println(F(" failed!"));
 		return;
 	}
 
-	Serial.println(F("\nParsed json."));
+	Serial.println(F(" success."));
 	json.printTo(Serial);
+	Serial.println();
 
 	strcpy(mqttServer, json["mqtt_server"]);
 	strcpy(mqttPort, json["mqtt_port"]);
