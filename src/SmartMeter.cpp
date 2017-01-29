@@ -109,7 +109,7 @@ void SmartMeter::setupWifi()
 	analogWrite(LED, 50);
 	if (!digitalRead(BTN))
 	{
-		Serial.println(F("Entering configuration mode by force."));
+		Serial.println(F("Entering configuration mode by request."));
 		wifiManager.startConfigPortal(AP_NAME);
 	}
 	else
@@ -221,7 +221,7 @@ void SmartMeter::publish()
 	// Check if the client's still connected.
 	if (!psClient.connected())
 	{
-		if (now - lastReconnect > RECONNECT_INTERVAL)
+		if (now - lastReconnect >= RECONNECT_INTERVAL)
 		{
 			Serial.print(F("Attempting to connect to MQTT server..."));
 			lastReconnect = now;
@@ -240,7 +240,7 @@ void SmartMeter::publish()
 	}
 
 	// If we got this far, we're connected.
-	if (now - lastPublish > PUBLISH_INTERVAL)
+	if (now - lastPublish >= PUBLISH_INTERVAL)
 	{
 		// All right, let's publish something!
 		lastPublish = now;
@@ -248,7 +248,7 @@ void SmartMeter::publish()
 		snprintf(payload, MQTT_PAYLOAD_MAX_LEN, "%lu", counter);
 		Serial.print(F("Publishing: "));
 		Serial.println(payload);		
-		psClient.publish(topic, payload, true);
+		psClient.publish(topic, payload);
 	}
 
 }
